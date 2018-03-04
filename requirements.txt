@@ -1,1 +1,1 @@
-pytz
+boto3

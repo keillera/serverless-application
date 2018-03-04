@@ -4,16 +4,6 @@
 #
 version: 2
 
-references:
-  workspace_artifacts: &workspace_artifacts
-    ./
-
-  persist_to_workspace_artifacts: &persist_to_workspace_artifacts
-    persist_to_workspace:
-      root: *workspace_artifacts
-      paths:
-        - common/*
-
 jobs:
   build:
     docker:
@@ -25,7 +15,8 @@ jobs:
     persist_to_workspace:
       root: ./
       paths:
-        - src/*
+        - functions/article_info/*
+        - common/*
 
     steps:
       - checkout
