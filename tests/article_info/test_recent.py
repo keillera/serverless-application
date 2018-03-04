@@ -10,7 +10,7 @@ class TestArticleInfoRecent(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        f = open("../../packaged-template.yaml", "r+")
+        f = open("./packaged-template.yaml", "r+")
         template = yaml.load(f)
         f.close()
 
