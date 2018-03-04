@@ -28,8 +28,6 @@ jobs:
           - v1-dependencies-{{ checksum "requirements.txt" }}
           - v1-dependencies-
 
-      - <<: *persist_to_workspace_artifacts
-
       - run:
           name: install dependencies
           command: |
