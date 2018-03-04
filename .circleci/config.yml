@@ -11,9 +11,15 @@ jobs:
 
     working_directory: ~/repo
 
+    persist_to_workspace:
+      root: *workspace_artifacts
+      paths:
+        - common/*
+
     steps:
       - checkout
-
+      - attach_workspace:
+          at: src/*
       # Download and cache dependencies
       - restore_cache:
           keys:
