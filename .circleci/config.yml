@@ -20,8 +20,6 @@ jobs:
 
     steps:
       - checkout
-      - attach_workspace:
-          at: src/*
       # Download and cache dependencies
       - restore_cache:
           keys:
@@ -39,11 +37,13 @@ jobs:
           paths:
             - ./venv
           key: v1-dependencies-{{ checksum "requirements.txt" }}
+
       - run:
           name: run tests
           command: |
             . venv/bin/activate
             export PYTHONPATH="/home/circleci/repo/common:/home/circleci/repo/functions/article_info/:$PYTHONPATH"
+            sudo apt-get -y -qq install awscli
             aws cloudformation package --template-file template.yaml --s3-bucket sample-sam-resource --output-template-file packaged-template.yaml
             python -m unittest tests.article_info.test_recent
 
