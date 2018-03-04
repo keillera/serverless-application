@@ -4,43 +4,56 @@ Globals:
   Function:
     Environment:
       Variables:
+        ARTICLE_INFO_TABLE_NAME:
+          Ref: ArticleInfo
         TABLE_NAME:
           Ref: SamSampleDynamoTable
     MemorySize: 256
     Runtime: python3.6
     Timeout: 15
 Resources:
-  AuthenticatedPolicy:
+  ArticleInfo:
     Properties:
-      PolicyDocument:
-        Statement:
-        - Action:
-          - mobileanalytics:PutEvents
-          - cognito-sync:*
-          - cognito-identity:*
-          Effect: Allow
-          Resource:
-          - '*'
-        Version: '2012-10-17'
-    Type: AWS::IAM::ManagedPolicy
-  AuthenticatedRole:
+      AttributeDefinitions:
+      - AttributeName: article_id
+        AttributeType: S
+      - AttributeName: status
+        AttributeType: S
+      - AttributeName: sort_key
+        AttributeType: N
+      GlobalSecondaryIndexes:
+      - IndexName: status-sort_key-index
+        KeySchema:
+        - AttributeName: status
+          KeyType: HASH
+        - AttributeName: sort_key
+          KeyType: RANGE
+        Projection:
+          ProjectionType: ALL
+        ProvisionedThroughput:
+          ReadCapacityUnits: 2
+          WriteCapacityUnits: 2
+      KeySchema:
+      - AttributeName: article_id
+        KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 2
+        WriteCapacityUnits: 2
+    Type: AWS::DynamoDB::Table
+  ArticleInfoRecent:
     Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-        - Action: sts:AssumeRoleWithWebIdentity
-          Condition:
-            ForAnyValue:StringLike:
-              cognito-identity.amazonaws.com:amr: authenticated
-            StringEquals:
-              cognito-identity.amazonaws.com:aud:
-                Ref: IdentityPool
-          Effect: Allow
-          Principal:
-            Federated: cognito-identity.amazonaws.com
-        Version: '2012-10-17'
-      ManagedPolicyArns:
-      - Ref: AuthenticatedPolicy
-    Type: AWS::IAM::Role
+      CodeUri: s3://sample-sam-resource/a539c4dff3c5b906084ddd8806a9d548
+      Events:
+        Api:
+          Properties:
+            Method: get
+            Path: /articles/recent
+            RestApiId:
+              Ref: RestApi
+          Type: Api
+      Handler: recent.lambda_handler
+      Role: arn:aws:iam::090169530579:role/lambda_dynamo_access
+    Type: AWS::Serverless::Function
   IdentityPool:
     Properties:
       AllowUnauthenticatedIdentities: false
@@ -54,31 +67,75 @@ Resources:
             - Ref: AWS::Region
             - .amazonaws.com/
             - Ref: UserPool
-      IdentityPoolName:
-        Ref: AWS::StackName
+      IdentityPoolName: SamplePool
     Type: AWS::Cognito::IdentityPool
-  LambdaRole:
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-        - Action:
-          - sts:AssumeRole
-          Effect: Allow
-          Principal:
-            Service:
-            - lambda.amazonaws.com
-        Version: '2012-10-17'
-      ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
-    Type: AWS::IAM::Role
   RestApi:
     Properties:
       DefinitionBody:
         basePath: /
+        definitions:
+          ArticleInfo:
+            properties:
+              article_id:
+                type: string
+              created_at:
+                type: string
+              eye_catch_url:
+                type: string
+              overview:
+                type: string
+              title:
+                type: string
+              user_id:
+                type: string
+            type: object
         info:
           title: dev-api
           version: 1.0.0
         paths:
+          /articles/recent:
+            get:
+              description: "\u6700\u65B0\u8A18\u4E8B\u4E00\u89A7\u60C5\u5831\u3092\
+                \u53D6\u5F97"
+              parameters:
+              - description: "\u516C\u958B\u30BF\u30A4\u30DF\u30F3\u30B0\u306B\u3088\
+                  \u308B\u8A18\u4E8B\u53D6\u5F97\u306E\u91CD\u8907\u3092\u3055\u3051\
+                  \u308B\u305F\u3081\u306B\u4F7F\u7528\u3059\u308B\u3002\u6307\u5B9A\
+                  \u6642\u523B\u4EE5\u524D\u306B\u516C\u958B\u3055\u308C\u305F\u6642\
+                  \u523B\u3067\u306E\u4E00\u89A7\u3092\u53D6\u5F97\u3059\u308B\u3002"
+                format: date-time
+                in: query
+                name: published_before
+                required: false
+                type: string
+              - description: "\u53D6\u5F97\u4EF6\u6570"
+                in: query
+                minimum: 1
+                name: limit
+                required: false
+                type: integer
+              - description: "\u53D6\u5F97\u4F4D\u7F6E"
+                in: query
+                minimum: 0
+                name: offset
+                required: false
+                type: integer
+              responses:
+                '200':
+                  description: "\u6700\u65B0\u8A18\u4E8B\u4E00\u89A7"
+                  schema:
+                    items:
+                      $ref: '#/definitions/ArticleInfo'
+                    type: array
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                passthroughBehavior: when_no_templates
+                responses:
+                  default:
+                    statusCode: '200'
+                type: aws_proxy
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ArticleInfoRecent.Arn}/invocations
           /users:
             get:
               consumes:
@@ -193,78 +250,21 @@ Resources:
             type: apiKey
             x-amazon-apigateway-authorizer:
               providerARNs:
-              - Fn::GetAtt:
-                - UserPool
-                - Arn
+              - arn:aws:cognito-idp:ap-northeast-1:090169530579:userpool/ap-northeast-1_MFKzdjrgD
               type: cognito_user_pools
             x-amazon-apigateway-authtype: cognito_user_pools
         swagger: '2.0'
       StageName: dev
     Type: AWS::Serverless::Api
-  RoleAttachment:
+  SamSampleDynamoTable:
     Properties:
-      IdentityPoolId:
-        Ref: IdentityPool
-      Roles:
-        authenticated:
-          Fn::GetAtt:
-          - AuthenticatedRole
-          - Arn
-        unauthenticated:
-          Fn::GetAtt:
-          - UnauthenticatedRole
-          - Arn
-    Type: AWS::Cognito::IdentityPoolRoleAttachment
-  SNSRole:
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-        - Action:
-          - sts:AssumeRole
-          Effect: Allow
-          Principal:
-            Service:
-            - cognito-idp.amazonaws.com
-        Version: '2012-10-17'
-      Policies:
-      - PolicyDocument:
-          Statement:
-          - Action: sns:publish
-            Effect: Allow
-            Resource: '*'
-          Version: '2012-10-17'
-        PolicyName: CognitoSNSPolicy
-    Type: AWS::IAM::Role
-  UnauthenticatedPolicy:
-    Properties:
-      PolicyDocument:
-        Statement:
-        - Action:
-          - mobileanalytics:PutEvents
-          - cognito-sync:*
-          Effect: Allow
-          Resource:
-          - '*'
-        Version: '2012-10-17'
-    Type: AWS::IAM::ManagedPolicy
-  UnauthenticatedRole:
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-        - Action: sts:AssumeRoleWithWebIdentity
-          Condition:
-            ForAnyValue:StringLike:
-              cognito-identity.amazonaws.com:amr: unauthenticated
-            StringEquals:
-              cognito-identity.amazonaws.com:aud:
-                Ref: IdentityPool
-          Effect: Allow
-          Principal:
-            Federated: cognito-identity.amazonaws.com
-        Version: '2012-10-17'
-      ManagedPolicyArns:
-      - Ref: UnauthenticatedPolicy
-    Type: AWS::IAM::Role
+      PrimaryKey:
+        Name: name
+        Type: String
+      ProvisionedThroughput:
+        ReadCapacityUnits: 2
+        WriteCapacityUnits: 2
+    Type: AWS::Serverless::SimpleTable
   UserPool:
     Properties:
       AdminCreateUserConfig:
@@ -274,11 +274,10 @@ Resources:
       - email
       - phone_number
       AutoVerifiedAttributes:
-      - phone_number
       - email
       EmailVerificationMessage: Your verification code is {####}.
       EmailVerificationSubject: Your verification code
-      MfaConfiguration: OPTIONAL
+      MfaConfiguration: 'OFF'
       Policies:
         PasswordPolicy:
           MinimumLength: 8
@@ -304,29 +303,17 @@ Resources:
           MaxLength: '2048'
           MinLength: '0'
       SmsAuthenticationMessage: Your authentication code is {####}.
-      SmsConfiguration:
-        ExternalId:
-          Fn::Join:
-          - ''
-          - - external-
-            - Ref: AWS::StackName
-        SnsCallerArn:
-          Fn::GetAtt:
-          - SNSRole
-          - Arn
       SmsVerificationMessage: Your verification code is {####}.
       UserPoolName:
         Ref: AWS::StackName
     Type: AWS::Cognito::UserPool
   UserPoolClient:
     Properties:
-      ClientName: JavaScriptClient
+      ClientName: SampleClient
       GenerateSecret: false
       ReadAttributes:
       - email
-      - email_verified
       - phone_number
-      - phone_number_verified
       UserPoolId:
         Ref: UserPool
       WriteAttributes:
