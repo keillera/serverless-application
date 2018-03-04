@@ -1,0 +1,336 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Create Lambda function by using AWS SAM.
+Globals:
+  Function:
+    Environment:
+      Variables:
+        TABLE_NAME:
+          Ref: SamSampleDynamoTable
+    MemorySize: 256
+    Runtime: python3.6
+    Timeout: 15
+Resources:
+  AuthenticatedPolicy:
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Action:
+          - mobileanalytics:PutEvents
+          - cognito-sync:*
+          - cognito-identity:*
+          Effect: Allow
+          Resource:
+          - '*'
+        Version: '2012-10-17'
+    Type: AWS::IAM::ManagedPolicy
+  AuthenticatedRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: sts:AssumeRoleWithWebIdentity
+          Condition:
+            ForAnyValue:StringLike:
+              cognito-identity.amazonaws.com:amr: authenticated
+            StringEquals:
+              cognito-identity.amazonaws.com:aud:
+                Ref: IdentityPool
+          Effect: Allow
+          Principal:
+            Federated: cognito-identity.amazonaws.com
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+      - Ref: AuthenticatedPolicy
+    Type: AWS::IAM::Role
+  IdentityPool:
+    Properties:
+      AllowUnauthenticatedIdentities: false
+      CognitoIdentityProviders:
+      - ClientId:
+          Ref: UserPoolClient
+        ProviderName:
+          Fn::Join:
+          - ''
+          - - cognito-idp.
+            - Ref: AWS::Region
+            - .amazonaws.com/
+            - Ref: UserPool
+      IdentityPoolName:
+        Ref: AWS::StackName
+    Type: AWS::Cognito::IdentityPool
+  LambdaRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+    Type: AWS::IAM::Role
+  RestApi:
+    Properties:
+      DefinitionBody:
+        basePath: /
+        info:
+          title: dev-api
+          version: 1.0.0
+        paths:
+          /users:
+            get:
+              consumes:
+              - application/json
+              description: 'Get lists of all users.
+
+                '
+              produces:
+              - application/json
+              responses:
+                '200':
+                  description: responce when request succeed
+                  schema:
+                    items:
+                      properties:
+                        name:
+                          example: foo
+                          type: string
+                      type: object
+                    type: array
+                '404':
+                  description: responce when request is failed
+                  schema:
+                    properties:
+                      error:
+                        example: 404 Not Found
+                        type: string
+                      message:
+                        example: Can not find resources
+                        type: string
+                    type: object
+              security:
+              - cognitoUserPool: []
+              summary: user index
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                passthroughBehavior: when_no_templates
+                responses:
+                  default:
+                    statusCode: '200'
+                type: aws_proxy
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UserIndex.Arn}/invocations
+            post:
+              consumes:
+              - application/json
+              description: 'Create user
+
+                '
+              parameters:
+              - description: User name.
+                in: body
+                name: name
+                required: true
+                schema:
+                  properties:
+                    name:
+                      example: foo
+                      type: string
+                  type: object
+              produces:
+              - application/json
+              responses:
+                '200':
+                  description: responce when request succeed
+                  schema:
+                    properties:
+                      name:
+                        example: foo
+                        type: string
+                    type: object
+                '400':
+                  description: responce when request is failed
+                  schema:
+                    properties:
+                      error:
+                        example: 400 Bad Request
+                        type: string
+                      message:
+                        example: Invalid parameter
+                        type: string
+                    type: object
+                '404':
+                  description: responce when request is failed
+                  schema:
+                    properties:
+                      error:
+                        example: 404 Not Found
+                        type: string
+                      message:
+                        example: Can not find resources
+                        type: string
+                    type: object
+              security:
+              - cognitoUserPool: []
+              summary: user create
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                passthroughBehavior: when_no_templates
+                responses:
+                  default:
+                    statusCode: '200'
+                type: aws_proxy
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UserCreate.Arn}/invocations
+        schemes:
+        - https
+        securityDefinitions:
+          cognitoUserPool:
+            in: header
+            name: Authorization
+            type: apiKey
+            x-amazon-apigateway-authorizer:
+              providerARNs:
+              - Fn::GetAtt:
+                - UserPool
+                - Arn
+              type: cognito_user_pools
+            x-amazon-apigateway-authtype: cognito_user_pools
+        swagger: '2.0'
+      StageName: dev
+    Type: AWS::Serverless::Api
+  RoleAttachment:
+    Properties:
+      IdentityPoolId:
+        Ref: IdentityPool
+      Roles:
+        authenticated:
+          Fn::GetAtt:
+          - AuthenticatedRole
+          - Arn
+        unauthenticated:
+          Fn::GetAtt:
+          - UnauthenticatedRole
+          - Arn
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
+  SNSRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - cognito-idp.amazonaws.com
+        Version: '2012-10-17'
+      Policies:
+      - PolicyDocument:
+          Statement:
+          - Action: sns:publish
+            Effect: Allow
+            Resource: '*'
+          Version: '2012-10-17'
+        PolicyName: CognitoSNSPolicy
+    Type: AWS::IAM::Role
+  UnauthenticatedPolicy:
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Action:
+          - mobileanalytics:PutEvents
+          - cognito-sync:*
+          Effect: Allow
+          Resource:
+          - '*'
+        Version: '2012-10-17'
+    Type: AWS::IAM::ManagedPolicy
+  UnauthenticatedRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: sts:AssumeRoleWithWebIdentity
+          Condition:
+            ForAnyValue:StringLike:
+              cognito-identity.amazonaws.com:amr: unauthenticated
+            StringEquals:
+              cognito-identity.amazonaws.com:aud:
+                Ref: IdentityPool
+          Effect: Allow
+          Principal:
+            Federated: cognito-identity.amazonaws.com
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+      - Ref: UnauthenticatedPolicy
+    Type: AWS::IAM::Role
+  UserPool:
+    Properties:
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: false
+        UnusedAccountValidityDays: 7
+      AliasAttributes:
+      - email
+      - phone_number
+      AutoVerifiedAttributes:
+      - phone_number
+      - email
+      EmailVerificationMessage: Your verification code is {####}.
+      EmailVerificationSubject: Your verification code
+      MfaConfiguration: OPTIONAL
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: false
+      Schema:
+      - AttributeDataType: String
+        DeveloperOnlyAttribute: false
+        Mutable: true
+        Name: email
+        Required: true
+        StringAttributeConstraints:
+          MaxLength: '2048'
+          MinLength: '0'
+      - AttributeDataType: String
+        DeveloperOnlyAttribute: false
+        Mutable: true
+        Name: phone_number
+        Required: true
+        StringAttributeConstraints:
+          MaxLength: '2048'
+          MinLength: '0'
+      SmsAuthenticationMessage: Your authentication code is {####}.
+      SmsConfiguration:
+        ExternalId:
+          Fn::Join:
+          - ''
+          - - external-
+            - Ref: AWS::StackName
+        SnsCallerArn:
+          Fn::GetAtt:
+          - SNSRole
+          - Arn
+      SmsVerificationMessage: Your verification code is {####}.
+      UserPoolName:
+        Ref: AWS::StackName
+    Type: AWS::Cognito::UserPool
+  UserPoolClient:
+    Properties:
+      ClientName: JavaScriptClient
+      GenerateSecret: false
+      ReadAttributes:
+      - email
+      - email_verified
+      - phone_number
+      - phone_number_verified
+      UserPoolId:
+        Ref: UserPool
+      WriteAttributes:
+      - email
+      - phone_number
+    Type: AWS::Cognito::UserPoolClient
+Transform: AWS::Serverless-2016-10-31
