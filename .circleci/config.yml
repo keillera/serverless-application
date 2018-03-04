@@ -39,11 +39,11 @@ jobs:
           paths:
             - ./venv
           key: v1-dependencies-{{ checksum "requirements.txt" }}
-
       - run:
           name: run tests
           command: |
             . venv/bin/activate
+            export PYTHONPATH="/home/circleci/repo/common:/home/circleci/repo/functions/article_info/:$PYTHONPATH"
             python -m unittest tests.articles.test_recent
 
       - store_artifacts:
