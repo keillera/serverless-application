@@ -43,7 +43,7 @@ jobs:
           command: |
             . venv/bin/activate
             python pre_exec_test.py
-            find ./tests -name "test_*.py" | rev |  cut -d/ -f 2- | rev | xargs python3 -m unittest discover
+            find ./tests -name "test_*.py" | rev |  cut -d/ -f 2- | rev | xargs python -m unittest discover
 
       - store_artifacts:
           path: test-reports
