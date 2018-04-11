@@ -137,7 +137,7 @@ class TestPostConfirmation(TestCase):
         }
         presignup = PreSignUp(event=event, context="", dynamodb=dynamodb)
         response = presignup.main()
-        self.assertEqual(response['statusCode'], 500)
+        self.assertEqual(response, None)
 
     def test_non_beta_user(self):
         os.environ['BETA_MODE_FLAG'] = "1"
@@ -152,4 +152,4 @@ class TestPostConfirmation(TestCase):
         }
         presignup = PreSignUp(event=event, context="", dynamodb=dynamodb)
         response = presignup.main()
-        self.assertEqual(response['statusCode'], 500)
+        self.assertEqual(response, None)

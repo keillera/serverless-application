@@ -28,9 +28,14 @@ class PreSignUp(LambdaBase):
                     'email': self.event['request']['userAttributes']['email']
                 }
             )
-            if item.get('Item', False) and item['Item']['used'] is False:
-                return self.event
-            else:
-                raise('This email address is not avalilable')
+
+            # validate user
+            beta_user = item.get('Item')
+            if beta_user is None:
+                return None
+            if beta_user.get('used') is not True:
+                return None
+
+            return self.event
         else:
             return self.event
