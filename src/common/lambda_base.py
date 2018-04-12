@@ -31,8 +31,10 @@ class LambdaBase(metaclass=ABCMeta):
         pass
 
     def main(self):
+
         logger = logging.getLogger()
         logger.setLevel(logging.INFO)
+        logger.info(self.event)
 
         try:
             # user validation
@@ -65,6 +67,7 @@ class LambdaBase(metaclass=ABCMeta):
             }
 
         except Exception as err:
+            logger.fatal(self.event)
             logger.fatal(err)
             traceback.print_exc()
 
