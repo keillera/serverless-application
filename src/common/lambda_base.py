@@ -35,6 +35,8 @@ class LambdaBase(metaclass=ABCMeta):
         logger = logging.getLogger()
         logger.setLevel(logging.INFO)
 
+        logger.info(self.event)
+
         try:
             # user validation
             UserUtil.verified_phone_and_email(self.event)
