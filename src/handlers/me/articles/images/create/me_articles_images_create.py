@@ -2,14 +2,13 @@
 import os
 import settings
 import uuid
-import base64
 import json
+import base64, hmac, hashlib
 from db_util import DBUtil
 from lambda_base import LambdaBase
-from jsonschema import validate, ValidationError
-from PIL import Image
-from io import BytesIO
+from jsonschema import validate
 from user_util import UserUtil
+from datetime import datetime, timedelta
 
 
 class MeArticlesImagesCreate(LambdaBase):
@@ -18,9 +17,9 @@ class MeArticlesImagesCreate(LambdaBase):
             'type': 'object',
             'properties': {
                 'article_id': settings.parameters['article_id'],
-                'article_image': settings.parameters['article_image']
+                'image_size': settings.parameters['image_size']
             },
-            'required': ['article_id', 'article_image']
+            'required': ['article_id', 'image_size']
         }
 
     def get_headers_schema(self):
@@ -53,21 +52,13 @@ class MeArticlesImagesCreate(LambdaBase):
             }]
         }
 
-    def validate_image_data(self, image_data):
-        try:
-            Image.open(BytesIO(base64.b64decode(image_data)))
-        except Exception:
-            raise ValidationError('Bad Request: No supported image format')
-
     def validate_params(self):
         UserUtil.verified_phone_and_email(self.event)
         # single
         # params
         validate(self.params, self.get_schema())
-        self.validate_image_data(self.params['article_image'])
         # headers
         validate(self.event.get('headers'), self.get_headers_schema())
-
         # relation
         DBUtil.validate_article_existence(
             self.dynamodb,
@@ -76,32 +67,46 @@ class MeArticlesImagesCreate(LambdaBase):
         )
 
     def exec_main_proc(self):
+        # post policy の有効期限（5分）
+        expiration = (datetime.now() + timedelta(minutes=5)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+        # S3 のファイルパス（key）を設定
         content_type = self.headers.get('content-type') \
             if self.headers.get('content-type') is not None else self.headers.get('Content-Type')
         ext = content_type.split('/')[1]
         user_id = self.event['requestContext']['authorizer']['claims']['cognito:username']
         key = settings.S3_ARTICLES_IMAGES_PATH + \
-            user_id + '/' + self.params['article_id'] + '/' + str(uuid.uuid4()) + '.' + ext
-        image_data = self.__get_save_image_data(base64.b64decode(self.params['article_image']), ext)
+              user_id + '/' + self.params['article_id'] + '/' + str(uuid.uuid4()) + '.' + ext
 
-        self.s3.Bucket(os.environ['DIST_S3_BUCKET_NAME']).put_object(
-            Body=image_data,
-            Key=key,
-            ContentType=content_type
-        )
+        # policy を作成
+        target_policy_json = json.dumps({
+            'expiration': expiration,
+            'conditions': [
+                {'bucket': os.environ['DIST_S3_BUCKET_NAME']},
+                {'key': key},
+                {'Content-Type': content_type},
+                {'acl': 'private'},
+                ['content-length-range', 1, 10485760]
+            ]
+        })
+        policy = base64.b64encode(target_policy_json.encode('ascii'))
+
+        # signature を作成
+        signature_hmac = hmac.new(os.environ['S3_SECRET_KEY'].encode('ascii'), policy, hashlib.sha1)
+        signature = base64.b64encode(signature_hmac.digest())
+
+        # 戻り値を作成
+        # バイナリ形式は json に対応していないため、ascii でデコードしたものを返却する。
+        return_body = {
+            'image_url': 'https://' + os.environ['DOMAIN'] + '/' + key,
+            'upload_url': 'https://' + os.environ['DIST_S3_BUCKET_NAME'] + '.s3.amazonaws.com/',
+            'S3_ACCESS_KEY': os.environ['S3_ACCESS_KEY'],
+            'signature': signature.decode('ascii'),
+            'policy': policy.decode('ascii'),
+            'key': key
+        }
 
         return {
             'statusCode': 200,
-            'body': json.dumps({'image_url': 'https://' + os.environ['DOMAIN'] + '/' + key})
+            'body': json.dumps(return_body)
         }
-
-    def __get_save_image_data(self, image_data, ext):
-        image = Image.open(BytesIO(image_data))
-        w, h = image.size
-        if w <= settings.ARTICLE_IMAGE_MAX_WIDTH and h <= settings.ARTICLE_IMAGE_MAX_HEIGHT:
-            return image_data
-
-        image.thumbnail((settings.ARTICLE_IMAGE_MAX_WIDTH, settings.ARTICLE_IMAGE_MAX_HEIGHT), Image.ANTIALIAS)
-        buf = BytesIO()
-        image.save(buf, format=ext)
-        return buf.getvalue()
