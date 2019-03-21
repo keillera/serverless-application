@@ -186,6 +186,14 @@ parameters = {
     },
     'state': {
         'type': 'string'
+    },
+    'recipient_eth_address': {
+        'type': 'string'
+    },
+    'send_value': {
+        'type': 'number',
+        'minimum': 1,
+        'maximum': 10 ** 24
     }
 }
 
