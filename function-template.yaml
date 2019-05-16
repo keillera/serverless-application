@@ -1,4 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
 Description: Lambda functions and API Gateway resources for the ALIS application.
 
 Parameters:
@@ -123,6 +124,11 @@ Parameters:
   DailyLimitTokenSendValue:
     Type: 'AWS::SSM::Parameter::Value<String>'
 
+Globals:
+  Function:
+    Layers:
+      - 'arn:aws:lambda:::awslayer:AmazonLinux1803'
+
 Resources:
   LambdaRole:
     Type: "AWS::IAM::Role"
@@ -144,7 +150,6 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonCognitoPowerUser
 
   #  Functions
-
   LoginYahoo:
     Type: "AWS::Lambda::Function"
     Properties:

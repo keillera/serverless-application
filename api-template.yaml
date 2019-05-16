@@ -145,6 +145,8 @@ Globals:
         ELASTIC_SEARCH_ENDPOINT: !Ref ElasticSearchEndpoint
         PAID_ARTICLES_TABLE_NAME: !Ref PaidArticlesTableName
         PAID_STATUS_TABLE_NAME: !Ref PaidStatusTableName
+    Layers:
+      - 'arn:aws:lambda:::awslayer:AmazonLinux1803'
 
 Resources:
   RestApi:
