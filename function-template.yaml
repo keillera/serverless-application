@@ -166,6 +166,8 @@ Resources:
       Role: !GetAtt LambdaRole.Arn
       Runtime: python3.6
       Timeout: 300
+      Layers:
+        - Fn::ImportValue: !Sub "${AlisAppId}-ApiPythonLayer"
   LoginFacebook:
     Type: "AWS::Lambda::Function"
     Properties:
@@ -188,6 +190,8 @@ Resources:
       Role: !GetAtt LambdaRole.Arn
       Runtime: python3.6
       Timeout: 300
+      Layers:
+        - Fn::ImportValue: !Sub "${AlisAppId}-ApiPythonLayer"
   LoginFacebookAuthorizationUrl:
     Type: "AWS::Lambda::Function"
     Properties:
@@ -204,6 +208,8 @@ Resources:
       Role: !GetAtt LambdaRole.Arn
       Runtime: python3.6
       Timeout: 300
+      Layers:
+        - Fn::ImportValue: !Sub "${AlisAppId}-ApiPythonLayer"
   LoginYahooAuthorizationUrl:
     Type: "AWS::Lambda::Function"
     Properties:
@@ -219,6 +225,8 @@ Resources:
       Role: !GetAtt LambdaRole.Arn
       Runtime: python3.6
       Timeout: 300
+      Layers:
+        - Fn::ImportValue: !Sub "${AlisAppId}-ApiPythonLayer"
   ArticlesPriceShow:
     Type: "AWS::Lambda::Function"
     Properties:
@@ -231,6 +239,8 @@ Resources:
       Role: !GetAtt LambdaRole.Arn
       Runtime: python3.6
       Timeout: 300
+      Layers:
+        - Fn::ImportValue: !Sub "${AlisAppId}-ApiPythonLayer"
   MeArticlesPurchasedShow:
     Type: "AWS::Lambda::Function"
     Properties:
@@ -245,6 +255,8 @@ Resources:
       Role: !GetAtt LambdaRole.Arn
       Runtime: python3.6
       Timeout: 300
+      Layers:
+        - Fn::ImportValue: !Sub "${AlisAppId}-ApiPythonLayer"
   MeArticlesPurchasedArticleIdsIndex:
     Type: "AWS::Lambda::Function"
     Properties:
@@ -257,6 +269,8 @@ Resources:
       Role: !GetAtt LambdaRole.Arn
       Runtime: python3.6
       Timeout: 300
+      Layers:
+        - Fn::ImportValue: !Sub "${AlisAppId}-ApiPythonLayer"
   MeArticlesPurchaseCreate:
     Type: "AWS::Lambda::Function"
     Properties:
@@ -279,6 +293,8 @@ Resources:
       Role: !GetAtt LambdaRole.Arn
       Runtime: python3.6
       Timeout: 300
+      Layers:
+        - Fn::ImportValue: !Sub "${AlisAppId}-ApiPythonLayer"
   MeArticlesPurchasedIndex:
     Type: "AWS::Lambda::Function"
     Properties:
@@ -292,6 +308,8 @@ Resources:
       Role: !GetAtt LambdaRole.Arn
       Runtime: python3.6
       Timeout: 300
+      Layers:
+        - Fn::ImportValue: !Sub "${AlisAppId}-ApiPythonLayer"
   MeWalletTokenSend:
     Type: "AWS::Lambda::Function"
     Properties:
@@ -309,6 +327,8 @@ Resources:
       Role: !GetAtt LambdaRole.Arn
       Runtime: python3.6
       Timeout: 300
+      Layers:
+        - Fn::ImportValue: !Sub "${AlisAppId}-ApiPythonLayer"
   WalletBridgeInformationShow:
     Type: "AWS::Lambda::Function"
     Properties:
@@ -323,6 +343,8 @@ Resources:
       Role: !GetAtt LambdaRole.Arn
       Runtime: python3.6
       Timeout: 300
+      Layers:
+        - Fn::ImportValue: !Sub "${AlisAppId}-ApiPythonLayer"
   MeWalletTokenHistoriesIndex:
     Type: "AWS::Lambda::Function"
     Properties:
@@ -338,6 +360,8 @@ Resources:
       Role: !GetAtt LambdaRole.Arn
       Runtime: python3.6
       Timeout: 300
+      Layers:
+        - Fn::ImportValue: !Sub "${AlisAppId}-ApiPythonLayer"
   MeApplicationsIndex:
     Type: "AWS::Lambda::Function"
     Properties:
@@ -351,6 +375,8 @@ Resources:
       MemorySize: 3008
       Runtime: python3.6
       Timeout: 300
+      Layers:
+        - Fn::ImportValue: !Sub "${AlisAppId}-ApiPythonLayer"
   MeApplicationsShow:
     Type: "AWS::Lambda::Function"
     Properties:
@@ -364,6 +390,8 @@ Resources:
       MemorySize: 3008
       Runtime: python3.6
       Timeout: 300
+      Layers:
+        - Fn::ImportValue: !Sub "${AlisAppId}-ApiPythonLayer"
   MeApplicationsCreate:
     Type: "AWS::Lambda::Function"
     Properties:
@@ -377,6 +405,8 @@ Resources:
       MemorySize: 3008
       Runtime: python3.6
       Timeout: 300
+      Layers:
+        - Fn::ImportValue: !Sub "${AlisAppId}-ApiPythonLayer"
   MeApplicationsUpdate:
     Type: "AWS::Lambda::Function"
     Properties:
@@ -390,6 +420,8 @@ Resources:
       MemorySize: 3008
       Runtime: python3.6
       Timeout: 300
+      Layers:
+        - Fn::ImportValue: !Sub "${AlisAppId}-ApiPythonLayer"
   MeApplicationsDelete:
     Type: "AWS::Lambda::Function"
     Properties:
@@ -403,6 +435,8 @@ Resources:
       MemorySize: 3008
       Runtime: python3.6
       Timeout: 300
+      Layers:
+        - Fn::ImportValue: !Sub "${AlisAppId}-ApiPythonLayer"
   MeAllowedApplicationsIndex:
     Type: "AWS::Lambda::Function"
     Properties:
@@ -416,6 +450,8 @@ Resources:
       MemorySize: 3008
       Runtime: python3.6
       Timeout: 300
+      Layers:
+        - Fn::ImportValue: !Sub "${AlisAppId}-ApiPythonLayer"
   MeAllowedApplicationsDelete:
     Type: "AWS::Lambda::Function"
     Properties:
@@ -429,6 +465,8 @@ Resources:
       MemorySize: 3008
       Runtime: python3.6
       Timeout: 300
+      Layers:
+        - Fn::ImportValue: !Sub "${AlisAppId}-ApiPythonLayer"
   ApplicationsShow:
     Type: "AWS::Lambda::Function"
     Properties:
@@ -442,6 +480,8 @@ Resources:
       MemorySize: 3008
       Runtime: python3.6
       Timeout: 300
+      Layers:
+        - Fn::ImportValue: !Sub "${AlisAppId}-ApiPythonLayer"
 
 Outputs:
   LambdaRole:

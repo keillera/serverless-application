@@ -14,6 +14,11 @@ SSM_PARAMS_PREFIX=${ALIS_APP_ID}ssm
 
 DEPLOY_BUCKET_NAME=${ALIS_APP_ID}-serverless-deploy-bucket
 
+# Layers 用 zip をデプロイ用の S3 バケットに格納
+if [ $1 = "common" ]; then
+    aws s3 cp ./deploy/api_python_layer.zip s3://${DEPLOY_BUCKET_NAME}/
+fi
+
 aws cloudformation package \
   --template-file ${target}template.yaml \
   --s3-bucket $DEPLOY_BUCKET_NAME \
@@ -25,6 +30,7 @@ aws cloudformation deploy \
   --stack-name ${ALIS_APP_ID}${1} \
   --parameter-overrides \
     AlisAppId=${ALIS_APP_ID} \
+    DeployBucketName=${DEPLOY_BUCKET_NAME} \
     AlisAppDomain=${SSM_PARAMS_PREFIX}AlisAppDomain \
     PrivateChainAwsAccessKey=${SSM_PARAMS_PREFIX}PrivateChainAwsAccessKey \
     PrivateChainAwsSecretAccessKey=${SSM_PARAMS_PREFIX}PrivateChainAwsSecretAccessKey \

@@ -148,6 +148,8 @@ Globals:
         ELASTIC_SEARCH_ENDPOINT: !Ref ElasticSearchEndpoint
         PAID_ARTICLES_TABLE_NAME: !Ref PaidArticlesTableName
         PAID_STATUS_TABLE_NAME: !Ref PaidStatusTableName
+    Layers:
+      - Fn::ImportValue: !Sub "${AlisAppId}-ApiPythonLayer"
 
 Resources:
   RestApi:

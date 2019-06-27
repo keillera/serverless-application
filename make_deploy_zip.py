@@ -23,8 +23,6 @@ def make_deploy_zip(zip_file_name, target_dir):
     exec_zip(zip_file_name, target_dir)
     # zip 追加（共通ライブラリ）
     exec_zip(zip_file_name, 'src/common')
-    # zip 追加（venv ライブラリ）
-    exec_zip(zip_file_name, 'vendor-package')
 
 
 # zip ファイル作成実行
@@ -43,3 +41,6 @@ for name in glob.iglob('src/handlers/**/handler.py', recursive=True):
     zip_file_name = target_dir[len('./src/handlers/'):].replace('/', '_') + '.zip'
     # zip 作成
     make_deploy_zip(zip_file_name, target_dir)
+
+# Layers 用 zip ファイル作成
+exec_zip('api_python_layer.zip', 'vendor-package')
